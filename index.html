@@ -11,22 +11,16 @@
     // ============================================================
     // ☁️ FREE CLOUD SETUP via JSONBin.io (no credit card needed)
     //
-    // STEP 1: Go to https://jsonbin.io and create a FREE account
-    // STEP 2: Click "CREATE BIN" — paste in: {}
-    // STEP 3: Copy the BIN ID from the URL (e.g. 664abc123...)
-    // STEP 4: Go to API Keys tab → copy your Master Key (starts with $2b$...)
+    // STEP 1: Go to https://jsonbin.io → Sign Up (free, no card)
+    // STEP 2: Click "CREATE BIN" → paste the JSON below → CREATE:
+    //   { "headBoy":{}, "headGirl":{}, "images":{},
+    //     "votedAadhaars":[], "adminPassword":"password", "updatedAt":0 }
+    // STEP 3: Copy the BIN ID from the URL bar
+    // STEP 4: Click your avatar → API Keys → copy the Master Key
     // STEP 5: Paste both values below and save the file
     // ============================================================
-    window._JSONBIN_BIN_ID  = "69ef9c81856a6821897bc4ad";          // e.g. "664abc1234567890abcdef12"
-    window._JSONBIN_API_KEY = "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C";       // e.g. "$2b$10$abcdef..."
-
-    window._cloudReady = (
-      window._JSONBIN_BIN_ID  !== "69ef9c81856a6821897bc4ad" &&
-      window._JSONBIN_API_KEY !== "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C"
-    );
-
-    console.log(window._cloudReady ? "✅ JSONBin cloud ready" : "⚡ Local mode — fill in JSONBin credentials to enable cloud sync");
-    document.dispatchEvent(new Event("firebaseReady"));
+    window._JSONBIN_BIN_ID  = "YOUR_BIN_ID";     // e.g. "6650abc1234567890abcdef"
+    window._JSONBIN_API_KEY = "YOUR_MASTER_KEY";  // e.g. "$2b$10$abcdef..."
   </script>
 
   <style>
@@ -399,56 +393,74 @@ let images = {
 let firebaseReady = false;
 let _syncInterval = null;
 
-document.addEventListener("firebaseReady", async () => {
-  firebaseReady = window._cloudReady || false;
+const BIN_ID  = () => window._JSONBIN_BIN_ID;
+const API_KEY = () => window._JSONBIN_API_KEY;
+
+function initCloud() {
+  firebaseReady = (
+    BIN_ID()  && BIN_ID()  !== "69ef9c81856a6821897bc4ad" &&
+    API_KEY() && API_KEY() !== "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C"
+  );
   const badge = document.getElementById("h-badge");
   if (firebaseReady) {
+    console.log("✅ JSONBin cloud ready — BIN:", BIN_ID());
     badge.innerHTML = '<span class="live-dot"></span> Cloud Connected';
-    badge.style.cssText += ";background:rgba(10,191,163,.2);color:#0abfa3;border-color:rgba(10,191,163,.4);";
-    await syncFromCloud();
-    startLiveSync();
+    badge.style.background = "rgba(10,191,163,.2)";
+    badge.style.color = "#0abfa3";
+    badge.style.borderColor = "rgba(10,191,163,.4)";
+    syncFromCloud().then(() => {
+      buildCandidates();
+      startLiveSync();
+    });
+  } else {
+    console.warn("⚡ Local mode — fill in BIN_ID and API_KEY to enable cloud sync");
   }
-});
+}
 
 async function syncFromCloud() {
   if (!firebaseReady) return;
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${window._JSONBIN_BIN_ID}/latest`, {
-      headers: { "X-Master-Key": window._JSONBIN_API_KEY }
-    });
-    const json = await res.json();
-    const d = json.record;
-    if (d && d.headBoy)  headBoy = d.headBoy;
-    if (d && d.headGirl) headGirl = d.headGirl;
-    if (d && d.images)   images = d.images;
-    if (d && d.votedAadhaars) d.votedAadhaars.forEach(a => votedAadhaars.add(a));
-    if (d && d.adminPassword) adminPassword = d.adminPassword;
-    if (!d || !d.headBoy) await pushToCloud();
+    const res = await fetch(
+      `https://api.jsonbin.io/v3/b/${BIN_ID()}/latest`,
+      { headers: { "X-Master-Key": API_KEY(), "X-Bin-Meta": "false" } }
+    );
+    if (!res.ok) { console.error("JSONBin GET failed:", res.status, await res.text()); return; }
+    const d = await res.json();
+    if (d.headBoy)        headBoy = d.headBoy;
+    if (d.headGirl)       headGirl = d.headGirl;
+    if (d.images)         images = d.images;
+    if (d.votedAadhaars)  { votedAadhaars.clear(); d.votedAadhaars.forEach(a => votedAadhaars.add(a)); }
+    if (d.adminPassword)  adminPassword = d.adminPassword;
+    console.log("✅ Synced from cloud. Voters:", votedAadhaars.size);
   } catch(e) { console.error("Sync error:", e); }
 }
 
 async function pushToCloud() {
   if (!firebaseReady) return;
   try {
-    await fetch(`https://api.jsonbin.io/v3/b/${window._JSONBIN_BIN_ID}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": window._JSONBIN_API_KEY
-      },
-      body: JSON.stringify({
-        headBoy, headGirl, images,
-        votedAadhaars: [...votedAadhaars],
-        adminPassword,
-        updatedAt: Date.now()
-      })
-    });
+    const res = await fetch(
+      `https://api.jsonbin.io/v3/b/${BIN_ID()}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": API_KEY()
+        },
+        body: JSON.stringify({
+          headBoy, headGirl, images,
+          votedAadhaars: [...votedAadhaars],
+          adminPassword,
+          updatedAt: Date.now()
+        })
+      }
+    );
+    if (!res.ok) { console.error("JSONBin PUT failed:", res.status, await res.text()); return; }
+    console.log("✅ Pushed to cloud.");
   } catch(e) { console.error("Push error:", e); }
 }
 
 function startLiveSync() {
   if (!firebaseReady) return;
-  // Poll every 8 seconds for live updates
   _syncInterval = setInterval(async () => {
     await syncFromCloud();
     if (!document.getElementById("admin-panel").classList.contains("hidden")) renderResults();
@@ -717,6 +729,7 @@ function updateSectionOptions() {
 window.addEventListener("load", () => {
   showPage("page-voting");
   buildCandidates();
+  initCloud();
 
   // Dynamic section options based on class
   document.getElementById("class").addEventListener("input", updateSectionOptions);
