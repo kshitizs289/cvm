@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cambridge Voting System 2025–26</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- JSONBin Cloud Storage (100% Free — no credit card needed) -->
+  <script>
+    // ============================================================
+    // ☁️ FREE CLOUD SETUP via JSONBin.io (no credit card needed)
+    //
+    // STEP 1: Go to https://jsonbin.io and create a FREE account
+    // STEP 2: Click "CREATE BIN" — paste in: {}
+    // STEP 3: Copy the BIN ID from the URL (e.g. 664abc123...)
+    // STEP 4: Go to API Keys tab → copy your Master Key (starts with $2b$...)
+    // STEP 5: Paste both values below and save the file
+    // ============================================================
+    window._JSONBIN_BIN_ID  = "69ef99f1856a6821897bb682";          // e.g. "664abc1234567890abcdef12"
+    window._JSONBIN_API_KEY = "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C";       // e.g. "$2b$10$abcdef..."
+
+    window._cloudReady = (
+      window._JSONBIN_BIN_ID  !== "69ef99f1856a6821897bb682" &&
+      window._JSONBIN_API_KEY !== "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C"
+    );
+
+    console.log(window._cloudReady ? "✅ JSONBin cloud ready" : "⚡ Local mode — fill in JSONBin credentials to enable cloud sync");
+    document.dispatchEvent(new Event("firebaseReady"));
+  </script>
+
+  <style>
+    :root {
+      /* Vivid primary — deep indigo/violet */
+      --pri:      #5c3bdb;
+      --pri-lt:   #ede8ff;
+      --pri-glow: rgba(92,59,219,0.22);
+      /* Vivid accent — electric teal */
+      --teal:     #0abfa3;
+      --teal-lt:  #d0f7f2;
+      --teal-glow:rgba(10,191,163,0.20);
+      /* Vivid accent 2 — coral/orange */
+      --coral:    #ff5e57;
+      --coral-lt: #ffe4e2;
+      /* Vivid accent 3 — amber/gold */
+      --gold:     #f5a623;
+      --gold-lt:  #fff3d6;
+      /* Neutrals */
+      --bg:       #f4f2ff;
+      --white:    #ffffff;
+      --dark:     #1a1333;
+      --mid:      #4a4170;
+      --light:    #8e89a8;
+      --border:   #ddd8f8;
+      --shadow:   rgba(92,59,219,0.10);
+      --shadow-h: rgba(92,59,219,0.22);
+      --r:        18px;
+      --r-sm:     10px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;overflow-x:hidden}
+
+    /* ── INTRO ── */
+    #intro{
+      position:fixed;inset:0;z-index:9999;
+      background:linear-gradient(135deg,#1a1333 0%,#2d1b6e 40%,#0d4a42 80%,#2d1b6e 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      transition:opacity .8s ease,transform .8s ease;
+    }
+    #intro.out{opacity:0;transform:scale(1.05);pointer-events:none}
+    .i-shape{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:fshape 5s ease-in-out infinite alternate}
+    .s1{width:320px;height:320px;background:#5c3bdb;top:-100px;left:-100px;animation-duration:6s}
+    .s2{width:260px;height:260px;background:#0abfa3;bottom:-70px;right:-70px;animation-duration:7s}
+    .s3{width:180px;height:180px;background:#f5a623;bottom:120px;left:60px;animation-duration:5s}
+    .s4{width:220px;height:220px;background:#ff5e57;top:60px;right:60px;animation-duration:8s}
+    @keyframes fshape{from{transform:translate(0,0) scale(1)}to{transform:translate(20px,15px) scale(1.08)}}
+    .i-logo{width:90px;height:90px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 8px 40px rgba(92,59,219,.5);animation:pulse 2s ease-in-out infinite;margin-bottom:26px;z-index:1}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+    .i-title{font-family:'Playfair Display',serif;font-size:clamp(26px,5vw,50px);font-weight:700;color:#fff;text-align:center;animation:sup .7s ease both;z-index:1;text-shadow:0 2px 20px rgba(92,59,219,.5)}
+    .i-sub{font-size:15px;color:rgba(255,255,255,.7);margin-top:8px;animation:sup .7s .15s ease both;z-index:1;text-align:center}
+    .i-pills{display:flex;gap:10px;margin-top:26px;animation:sup .7s .3s ease both;z-index:1;flex-wrap:wrap;justify-content:center}
+    .i-pill{padding:6px 18px;border-radius:100px;font-size:13px;font-weight:600;backdrop-filter:blur(8px)}
+    .pa{background:rgba(92,59,219,.35);color:#c4b5fd;border:1px solid rgba(92,59,219,.4)}
+    .pb{background:rgba(10,191,163,.3);color:#5eead4;border:1px solid rgba(10,191,163,.4)}
+    .pc{background:rgba(255,94,87,.3);color:#fca5a5;border:1px solid rgba(255,94,87,.4)}
+    .i-bar-wrap{margin-top:40px;width:210px;height:4px;background:rgba(255,255,255,.15);border-radius:10px;overflow:hidden;animation:sup .7s .45s ease both;z-index:1}
+    .i-bar{height:100%;background:linear-gradient(90deg,#5c3bdb,#0abfa3,#f5a623);border-radius:10px;animation:lbar 2.4s ease forwards}
+    @keyframes lbar{from{width:0}to{width:100%}}
+    @keyframes sup{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── HEADER ── */
+    header{
+      background:linear-gradient(135deg,#1a1333 0%,#2a1860 60%,#0d4a42 100%);
+      border-bottom:2px solid rgba(92,59,219,.3);
+      padding:18px 36px;display:flex;align-items:center;gap:16px;
+      position:sticky;top:0;z-index:100;
+    }
+    .h-icon{font-size:32px;filter:drop-shadow(0 0 8px rgba(92,59,219,.6))}
+    .h-text h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff}
+    .h-text p{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
+    .h-badge{
+      margin-left:auto;padding:5px 14px;border-radius:100px;
+      font-size:12px;font-weight:600;
+      background:rgba(92,59,219,.3);color:#c4b5fd;border:1px solid rgba(92,59,219,.4);
+      transition:all .4s;
+    }
+    .live-dot{display:inline-block;width:7px;height:7px;background:#0abfa3;border-radius:50%;margin-right:5px;animation:blink 1.4s ease infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* ── PAGES ── */
+    .page{display:none;animation:pin .5s ease both}
+    .page.active{display:block}
+    @keyframes pin{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .container{max-width:860px;margin:32px auto;padding:0 20px}
+
+    /* ── CARD ── */
+    .card{background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:30px;box-shadow:0 4px 24px var(--shadow);margin-bottom:22px}
+    .card-title{
+      font-family:'Playfair Display',serif;font-size:19px;font-weight:600;color:var(--dark);
+      margin-bottom:20px;display:flex;align-items:center;gap:10px;
+    }
+    .card-title::before{content:'';display:inline-block;width:4px;height:20px;background:linear-gradient(to bottom,var(--pri),var(--teal));border-radius:4px}
+
+    /* ── FORM ── */
+    .fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:580px){.fg{grid-template-columns:1fr}}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:12px;font-weight:600;color:var(--light);letter-spacing:.4px;text-transform:uppercase}
+    .field input,.field select{
+      padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);
+      font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--bg);outline:none;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .field input:focus,.field select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-glow);background:white}
+    .radio-row{display:flex;gap:10px;flex-wrap:wrap}
+    .r-pill{
+      display:flex;align-items:center;gap:7px;padding:8px 16px;
+      border:1.5px solid var(--border);border-radius:100px;cursor:pointer;
+      font-size:13px;font-weight:500;color:var(--mid);background:var(--bg);
+      transition:all .2s;user-select:none;
+    }
+    .r-pill input{display:none}
+    .r-pill:has(input:checked){border-color:var(--pri);background:var(--pri-lt);color:var(--pri);box-shadow:0 2px 10px var(--pri-glow)}
+    .r-pill:hover{border-color:var(--pri)}
+
+    /* ── STAGE BAR ── */
+    .stage-bar{display:flex;align-items:center;margin-bottom:26px}
+    .s-step{display:flex;align-items:center;gap:7px;flex:1}
+    .s-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:all .4s}
+    .s-dot.done{background:var(--teal);color:#fff;box-shadow:0 2px 10px var(--teal-glow)}
+    .s-dot.active{background:var(--pri);color:#fff;box-shadow:0 2px 14px var(--pri-glow)}
+    .s-dot.idle{background:var(--border);color:var(--light)}
+    .s-label{font-size:12px;font-weight:600;color:var(--mid)}
+    .s-line{height:2px;flex:1;background:var(--border);margin:0 6px;border-radius:2px;transition:background .4s}
+    .s-line.done{background:var(--teal)}
+
+    /* ── CANDIDATES ── */
+    .cands-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;margin-top:6px}
+    .c-card{
+      background:var(--bg);border:2px solid var(--border);border-radius:var(--r);
+      padding:18px 12px;text-align:center;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;
+    }
+    .c-card:hover{border-color:var(--pri);transform:translateY(-4px);box-shadow:0 10px 30px var(--shadow-h)}
+    .c-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--pri-lt),var(--teal-lt));opacity:0;transition:opacity .22s}
+    .c-card:hover::before{opacity:1}
+    .c-img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid white;box-shadow:0 4px 16px var(--shadow-h);position:relative;z-index:1}
+    .c-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--dark);margin-top:10px;line-height:1.3;position:relative;z-index:1}
+    .c-class{font-size:11px;color:var(--light);margin-top:3px;position:relative;z-index:1}
+    .v-btn{
+      margin-top:10px;padding:7px 18px;
+      background:linear-gradient(135deg,var(--pri),#7c5be8);
+      color:white;border:none;border-radius:100px;
+      font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;
+      cursor:pointer;position:relative;z-index:1;transition:all .2s;letter-spacing:.3px;
+    }
+    .v-btn:hover{transform:scale(1.06);box-shadow:0 4px 18px var(--pri-glow)}
+    .v-btn.girl{background:linear-gradient(135deg,var(--coral),#ff8c87)}
+    .v-btn.girl:hover{box-shadow:0 4px 18px rgba(255,94,87,.45)}
+
+    /* ── BUTTONS ── */
+    .btn{padding:11px 24px;border:none;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .22s;letter-spacing:.3px;display:inline-flex;align-items:center;gap:7px}
+    .btn-primary{background:linear-gradient(135deg,var(--pri),#7c5be8);color:white;box-shadow:0 4px 16px var(--pri-glow)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(92,59,219,.4)}
+    .btn-2{background:var(--white);color:var(--dark);border:1.5px solid var(--border)}
+    .btn-2:hover{background:var(--pri-lt);border-color:var(--pri);color:var(--pri)}
+    .btn-danger{background:linear-gradient(135deg,var(--coral),#cc3a35);color:white;box-shadow:0 4px 14px rgba(255,94,87,.25)}
+    .btn-danger:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(255,94,87,.4)}
+    .btn-mint{background:linear-gradient(135deg,var(--teal),#079e88);color:white;box-shadow:0 4px 14px var(--teal-glow)}
+    .btn-mint:hover{transform:translateY(-2px)}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+
+    /* ── ADMIN ── */
+    .admin-wrap{max-width:420px;margin:50px auto}
+    .pass-field{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--bg);outline:none;transition:border-color .2s,box-shadow .2s}
+    .pass-field:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-glow);background:white}
+
+    /* Results */
+    .r-cat{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:var(--dark);margin:22px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--border)}
+    .r-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .r-row:last-child{border-bottom:none}
+    .r-name{flex:1;font-size:14px;font-weight:500;color:var(--dark)}
+    .r-bar-w{flex:2;height:9px;background:var(--border);border-radius:10px;overflow:hidden}
+    .r-bar{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--pri),#7c5be8);transition:width .6s ease}
+    .r-bar.girl{background:linear-gradient(90deg,var(--coral),#ff8c87)}
+    .r-votes{font-size:12px;font-weight:600;color:var(--mid);min-width:62px;text-align:right}
+    .w-badge{background:var(--gold-lt);color:#b45309;padding:2px 9px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+    .total-badge{display:inline-block;background:var(--teal-lt);color:#077a68;padding:7px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;margin-bottom:16px}
+    .fb-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--mid);padding:4px 12px;background:var(--bg);border:1px solid var(--border);border-radius:100px;margin-left:12px}
+    .res-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .res-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--dark)}
+
+    /* Candidate forms */
+    .cf-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px}
+    .cf-box .fg{grid-template-columns:1fr 1fr}
+
+    /* ── TOAST ── */
+    .toast-wrap{position:fixed;bottom:26px;right:26px;z-index:9998;display:flex;flex-direction:column;gap:9px;pointer-events:none}
+    .toast{background:white;border-radius:var(--r-sm);padding:13px 18px;font-size:13px;font-weight:500;box-shadow:0 8px 30px rgba(0,0,0,.13);border-left:4px solid var(--pri);max-width:300px;animation:tin .4s ease both,tout .4s 3.5s ease both;pointer-events:all}
+    .toast.success{border-color:var(--teal)}
+    .toast.error{border-color:var(--coral)}
+    @keyframes tin{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes tout{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(28px)}}
+
+    /* Confetti */
+    #confetti{position:fixed;inset:0;pointer-events:none;z-index:9990;display:none}
+
+    .hidden{display:none!important}
+    .divider{height:1px;background:var(--border);margin:20px 0}
+  </style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="i-shape s1"></div>
+  <div class="i-shape s2"></div>
+  <div class="i-shape s3"></div>
+  <div class="i-shape s4"></div>
+  <div class="i-logo">🗳️</div>
+  <div class="i-title">Cambridge Voting System</div>
+  <div class="i-sub">Head Boy &amp; Head Girl Elections · 2025–26</div>
+  <div class="i-pills">
+    <div class="i-pill pa">✦ Secure</div>
+    <div class="i-pill pb">✦ Real-time Cloud</div>
+    <div class="i-pill pc">✦ Fair</div>
+  </div>
+  <div class="i-bar-wrap"><div class="i-bar"></div></div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="h-icon">🏫</div>
+  <div class="h-text">
+    <h1>Cambridge School Elections</h1>
+    <p>Head Boy &amp; Head Girl · Academic Year 2025–26</p>
+  </div>
+  <div class="h-badge" id="h-badge">⚡ Local Mode</div>
+</header>
+
+<!-- ═══ VOTING PAGE ═══ -->
+<div id="page-voting" class="page">
+  <div class="container">
+
+    <div class="card">
+      <div class="card-title">Voter Details</div>
+      <div class="fg">
+        <div class="field"><label>Full Name</label><input id="name" placeholder="Your full name" /></div>
+        <div class="field"><label>Age</label><input id="age" type="number" placeholder="Your age" /></div>
+        <div class="field"><label>Aadhaar (last 4 digits)</label><input id="aadhaar" maxlength="4" placeholder="e.g. 4782" /></div>
+        <div class="field"><label>Class</label><input id="class" placeholder="e.g. 10" /></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="field" style="margin-bottom:12px">
+          <label>Section</label>
+          <div class="radio-row" id="section-row">
+            <label class="r-pill"><input type="radio" name="section" value="Shine" /> Shine</label>
+            <label class="r-pill"><input type="radio" name="section" value="Bright" /> Bright</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Gender</label>
+          <div class="radio-row">
+            <label class="r-pill"><input type="radio" name="gender" value="Male" /> 👦 Male</label>
+            <label class="r-pill"><input type="radio" name="gender" value="Female" /> 👧 Female</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Bar -->
+    <div class="stage-bar">
+      <div class="s-step"><div class="s-dot active" id="d-boy">1</div><span class="s-label">Head Boy Vote</span></div>
+      <div class="s-line" id="l-mid"></div>
+      <div class="s-step"><div class="s-dot idle" id="d-girl">2</div><span class="s-label">Head Girl Vote</span></div>
+      <div class="s-line"></div>
+      <div class="s-step"><div class="s-dot idle" id="d-done">✓</div><span class="s-label">Done!</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="stage-label">🎖️ Vote for Head Boy</div>
+      <div class="cands-grid" id="cands-box"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="gotoAdmin()">🔐 Admin Panel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN PAGE ═══ -->
+<div id="page-admin" class="page">
+  <div class="container">
+
+    <!-- Login -->
+    <div class="card admin-wrap" id="admin-login">
+      <div class="card-title">Admin Login</div>
+      <div class="field" style="margin-bottom:14px">
+        <label>Password</label>
+        <input class="pass-field" id="admin-pass" type="password" placeholder="Enter admin password" />
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="checkAdmin()">🔓 View Results</button>
+        <button class="btn btn-2" onclick="gotoVoting()">← Back</button>
+      </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div id="admin-panel" class="hidden">
+      <div class="res-head">
+        <div class="res-title">Live Results</div>
+        <div class="fb-status" id="res-fb-status">⚡ Local</div>
+      </div>
+      <div class="total-badge" id="total-badge">Total Voters: 0</div>
+      <div class="card">
+        <div id="results-box"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-mint" onclick="refreshResults()">🔄 Refresh</button>
+        <button class="btn btn-2" onclick="showChangeCands()">✏️ Change Candidates</button>
+        <button class="btn btn-2" onclick="changePwd()">🔑 Change Password</button>
+        <button class="btn btn-2" onclick="resetVotes()">🗑️ Reset Votes</button>
+        <button class="btn btn-danger" onclick="exitAdmin()">← Exit</button>
+      </div>
+    </div>
+
+    <!-- Change Candidates Panel -->
+    <div id="change-panel" class="hidden">
+      <div class="card">
+        <div class="card-title">Change Candidates</div>
+        <p style="font-size:14px;color:var(--mid);margin-bottom:18px">Update the candidate list. This will also reset all votes.</p>
+        <div class="fg">
+          <div class="field"><label>Number of Head Boy Candidates</label><input id="boy-count" type="number" value="5" /></div>
+          <div class="field"><label>Number of Head Girl Candidates</label><input id="girl-count" type="number" value="3" /></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="buildCandForms()">Next →</button>
+          <button class="btn btn-2" onclick="hideChangeCands()">← Cancel</button>
+        </div>
+        <div id="cand-forms" style="margin-top:22px"></div>
+        <div id="save-btn" class="hidden btn-row">
+          <button class="btn btn-mint" onclick="saveNewCands()">💾 Save &amp; Sync</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ────────── STATE ──────────
+let adminPassword = "password";
+let stage = "head_boy";
+let currentAadhaar = null;
+const votedAadhaars = new Set();
+
+let headBoy = {
+  "Parv Agarwal  (XI Commerce)": 0,
+  "Shaurya Gupta  (XI Commerce)": 0,
+  "Atharv  (XI Commerce)": 0
+};
+let headGirl = {
+  "Agrima  (XI Commerce)": 0,
+  "Avishi Agnihotri  (XI science)": 0,
+  "Bhavya Dixit  (XI science)": 0
+};
+let images = {
+  "Parv Agarwal  (XI Commerce)": "parv.png",
+  "Shaurya Gupta  (XI Commerce)": "shaurya.png",
+  "Atharv  (XI Commerce)": "atharv.png",
+  "Agrima  (XI Commerce)": "agrima.png",
+  "Avishi Agnihotri  (XI science)": "avishi.png",
+  "Bhavya Dixit  (XI science)": "bhavya.png"
+};
+
+// ────────── JSONBIN CLOUD ──────────
+let firebaseReady = false;
+let _syncInterval = null;
+
+document.addEventListener("firebaseReady", async () => {
+  firebaseReady = window._cloudReady || false;
+  const badge = document.getElementById("h-badge");
+  if (firebaseReady) {
+    badge.innerHTML = '<span class="live-dot"></span> Cloud Connected';
+    badge.style.cssText += ";background:rgba(10,191,163,.2);color:#0abfa3;border-color:rgba(10,191,163,.4);";
+    await syncFromCloud();
+    startLiveSync();
+  }
+});
+
+async function syncFromCloud() {
+  if (!firebaseReady) return;
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${window._JSONBIN_BIN_ID}/latest`, {
+      headers: { "X-Master-Key": window._JSONBIN_API_KEY }
+    });
+    const json = await res.json();
+    const d = json.record;
+    if (d && d.headBoy)  headBoy = d.headBoy;
+    if (d && d.headGirl) headGirl = d.headGirl;
+    if (d && d.images)   images = d.images;
+    if (d && d.votedAadhaars) d.votedAadhaars.forEach(a => votedAadhaars.add(a));
+    if (d && d.adminPassword) adminPassword = d.adminPassword;
+    if (!d || !d.headBoy) await pushToCloud();
+  } catch(e) { console.error("Sync error:", e); }
+}
+
+async function pushToCloud() {
+  if (!firebaseReady) return;
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${window._JSONBIN_BIN_ID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": window._JSONBIN_API_KEY
+      },
+      body: JSON.stringify({
+        headBoy, headGirl, images,
+        votedAadhaars: [...votedAadhaars],
+        adminPassword,
+        updatedAt: Date.now()
+      })
+    });
+  } catch(e) { console.error("Push error:", e); }
+}
+
+function startLiveSync() {
+  if (!firebaseReady) return;
+  // Poll every 8 seconds for live updates
+  _syncInterval = setInterval(async () => {
+    await syncFromCloud();
+    if (!document.getElementById("admin-panel").classList.contains("hidden")) renderResults();
+  }, 8000);
+}
+
+// ────────── TOAST ──────────
+function toast(msg, type="info") {
+  const wrap = document.getElementById("toasts");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+// ────────── PAGES ──────────
+function showPage(id) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function gotoAdmin()  { showPage("page-admin"); }
+function gotoVoting() {
+  showPage("page-voting");
+  document.getElementById("admin-panel").classList.add("hidden");
+  document.getElementById("admin-login").classList.remove("hidden");
+  document.getElementById("change-panel").classList.add("hidden");
+  document.getElementById("admin-pass").value = "";
+}
+
+// ────────── CANDIDATES ──────────
+function buildCandidates() {
+  const box = document.getElementById("cands-box");
+  box.innerHTML = "";
+  const list   = stage === "head_boy" ? headBoy : headGirl;
+  const isGirl = stage === "head_girl";
+
+  document.getElementById("d-boy").className  = "s-dot " + (stage === "head_boy" ? "active" : "done");
+  document.getElementById("d-girl").className = "s-dot " + (stage === "head_girl" ? "active" : "idle");
+  document.getElementById("d-done").className = "s-dot idle";
+  document.getElementById("l-mid").className  = "s-line " + (isGirl ? "done" : "");
+  document.getElementById("stage-label").textContent = isGirl ? "👑 Vote for Head Girl" : "🎖️ Vote for Head Boy";
+
+  for (const name in list) {
+    const parts = name.split("  (");
+    const dn    = parts[0];
+    const cls   = parts[1] ? "(" + parts[1] : "";
+    const safeName = name.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    const imgSrc = images[name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(dn)}&background=ede9ff&color=5b3fd6&size=128`;
+    const div = document.createElement("div");
+    div.className = "c-card";
+    div.innerHTML = `
+      <img class="c-img" src="${imgSrc}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(dn)}&background=ede9ff&color=5b3fd6&size=128'" />
+      <div class="c-name">${dn}</div>
+      <div class="c-class">${cls}</div>
+      <button class="v-btn ${isGirl?'girl':''}" onclick="vote('${safeName}')">Vote</button>`;
+    box.appendChild(div);
+  }
+}
+
+// ────────── VOTE ──────────
+function vote(name) {
+  const vName   = document.getElementById("name").value.trim();
+  const age     = parseInt(document.getElementById("age").value);
+  const aadhaar = document.getElementById("aadhaar").value.trim();
+  const cls     = document.getElementById("class").value.trim();
+  const section = document.querySelector("input[name='section']:checked");
+  const gender  = document.querySelector("input[name='gender']:checked");
+
+  if (!vName||isNaN(age)||!aadhaar||!cls||!section||!gender) { toast("Please fill all fields.", "error"); return; }
+  if (aadhaar.length !== 4 || isNaN(aadhaar)) { toast("Aadhaar must be exactly 4 digits.", "error"); return; }
+  if (age < 11) { toast("You must be at least 11 years old.", "error"); return; }
+  if (age > 20) { toast("Age too high — not eligible.", "error"); return; }
+  if (parseInt(cls) > 12) { toast("Class cannot be above 12.", "error"); return; }
+
+  if (stage === "head_boy") {
+    if (votedAadhaars.has(aadhaar)) { toast("This Aadhaar has already voted.", "error"); return; }
+    headBoy[name]++;
+    currentAadhaar = aadhaar;
+    stage = "head_girl";
+    buildCandidates();
+    toast("✅ Head Boy vote recorded! Now vote for Head Girl.", "success");
+    pushToCloud();
+  } else {
+    if (aadhaar !== currentAadhaar) { toast("Use the same Aadhaar for Head Girl vote.", "error"); return; }
+    headGirl[name]++;
+    votedAadhaars.add(aadhaar);
+    document.getElementById("d-girl").className = "s-dot done";
+    document.getElementById("d-done").className = "s-dot done";
+    toast("🎉 Both votes recorded — thank you!", "success");
+    triggerConfetti();
+    pushToCloud();
+    setTimeout(() => {
+      ["name","age","aadhaar","class"].forEach(id => document.getElementById(id).value = "");
+      document.querySelectorAll("input[name='section'],input[name='gender']").forEach(i => i.checked = false);
+      stage = "head_boy"; currentAadhaar = null;
+      buildCandidates();
+    }, 1900);
+  }
+}
+
+// ────────── ADMIN ──────────
+async function checkAdmin() {
+  await syncFromCloud();
+  if (document.getElementById("admin-pass").value !== adminPassword) { toast("Incorrect password.", "error"); return; }
+  document.getElementById("admin-login").classList.add("hidden");
+  document.getElementById("admin-panel").classList.remove("hidden");
+  document.getElementById("res-fb-status").innerHTML = firebaseReady
+    ? '<span class="live-dot"></span> Live Cloud Sync' : '⚡ Local Mode';
+  renderResults();
+}
+
+function renderResults() {
+  const box = document.getElementById("results-box");
+  document.getElementById("total-badge").textContent = `Total Voters: ${votedAadhaars.size}`;
+  const maxB = Math.max(0, ...Object.values(headBoy));
+  const maxG = Math.max(0, ...Object.values(headGirl));
+  let html = `<div class="r-cat">🎖️ Head Boy</div>`;
+  for (const [k,v] of Object.entries(headBoy)) {
+    const pct = maxB > 0 ? (v/maxB)*100 : 0;
+    const win = v === maxB && maxB > 0;
+    html += `<div class="r-row">
+      <div class="r-name">${k} ${win?'<span class="w-badge">🏆 Leading</span>':''}</div>
+      <div class="r-bar-w"><div class="r-bar" style="width:${pct}%"></div></div>
+      <div class="r-votes">${v} vote${v!==1?'s':''}</div></div>`;
+  }
+  html += `<div class="r-cat" style="margin-top:28px">👑 Head Girl</div>`;
+  for (const [k,v] of Object.entries(headGirl)) {
+    const pct = maxG > 0 ? (v/maxG)*100 : 0;
+    const win = v === maxG && maxG > 0;
+    html += `<div class="r-row">
+      <div class="r-name">${k} ${win?'<span class="w-badge">🏆 Leading</span>':''}</div>
+      <div class="r-bar-w"><div class="r-bar girl" style="width:${pct}%"></div></div>
+      <div class="r-votes">${v} vote${v!==1?'s':''}</div></div>`;
+  }
+  box.innerHTML = html;
+}
+
+async function refreshResults() { await syncFromCloud(); renderResults(); toast("Refreshed.", "success"); }
+
+async function resetVotes() {
+  if (!confirm("Reset ALL votes? This cannot be undone.")) return;
+  for (const k in headBoy)  headBoy[k] = 0;
+  for (const k in headGirl) headGirl[k] = 0;
+  votedAadhaars.clear();
+  await pushToCloud();
+  renderResults();
+  toast("All votes reset.", "success");
+}
+
+function changePwd() {
+  const np = prompt("Enter new admin password:");
+  if (!np || !np.trim()) return;
+  adminPassword = np.trim();
+  pushToCloud();
+  toast("Password updated & synced.", "success");
+}
+
+function exitAdmin() { gotoVoting(); }
+
+// ────────── CHANGE CANDIDATES ──────────
+function showChangeCands() {
+  document.getElementById("change-panel").classList.remove("hidden");
+  document.getElementById("admin-panel").classList.add("hidden");
+}
+function hideChangeCands() {
+  document.getElementById("change-panel").classList.add("hidden");
+  document.getElementById("admin-panel").classList.remove("hidden");
+}
+
+function buildCandForms() {
+  const boys  = parseInt(document.getElementById("boy-count").value);
+  const girls = parseInt(document.getElementById("girl-count").value);
+  const box   = document.getElementById("cand-forms");
+  box.innerHTML = `<h3 style="font-family:'Playfair Display',serif;margin-bottom:12px;color:var(--dark)">Head Boy Candidates</h3>`;
+  for (let i=0;i<boys;i++) box.innerHTML += candFormRow("boy");
+  box.innerHTML += `<h3 style="font-family:'Playfair Display',serif;margin:20px 0 12px;color:var(--dark)">Head Girl Candidates</h3>`;
+  for (let i=0;i<girls;i++) box.innerHTML += candFormRow("girl");
+  document.getElementById("save-btn").classList.remove("hidden");
+}
+
+function candFormRow(type) {
+  return `<div class="cf-box"><div class="fg">
+    <div class="field"><label>Name (e.g. Riya Sharma  (XI science))</label><input class="${type}-name" placeholder="Full Name  (Class)" /></div>
+    <div class="field"><label>Photo filename or URL</label><input class="${type}-img" placeholder="photo.png or https://..." /></div>
+  </div></div>`;
+}
+
+async function saveNewCands() {
+  headBoy = {}; headGirl = {}; images = {};
+  document.querySelectorAll(".boy-name").forEach((inp,i) => {
+    const name = inp.value.trim();
+    const img  = document.querySelectorAll(".boy-img")[i].value.trim();
+    if (name) { headBoy[name] = 0; images[name] = img || "default.png"; }
+  });
+  document.querySelectorAll(".girl-name").forEach((inp,i) => {
+    const name = inp.value.trim();
+    const img  = document.querySelectorAll(".girl-img")[i].value.trim();
+    if (name) { headGirl[name] = 0; images[name] = img || "default.png"; }
+  });
+  votedAadhaars.clear();
+  await pushToCloud();
+  stage = "head_boy";
+  buildCandidates();
+  renderResults();
+  toast("Candidates updated and synced to cloud!", "success");
+  hideChangeCands();
+}
+
+// ────────── CONFETTI ──────────
+function triggerConfetti() {
+  const canvas = document.getElementById("confetti");
+  canvas.style.display = "block";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext("2d");
+  const cols = ["#c5b8f0","#a8e6cf","#f9c784","#f4a8c0","#a3d4f7","#7c5be8","#34d399"];
+  const pieces = Array.from({length:110}, () => ({
+    x: Math.random()*canvas.width, y: -20-Math.random()*canvas.height*.5,
+    w: Math.random()*10+5, h: Math.random()*5+3,
+    color: cols[Math.floor(Math.random()*cols.length)],
+    vx: (Math.random()-.5)*3, vy: Math.random()*4+2,
+    rot: Math.random()*360, vrot: (Math.random()-.5)*7
+  }));
+  let f=0;
+  (function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.vrot; p.vy+=.06;
+    });
+    if(++f<170) requestAnimationFrame(draw);
+    else { ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display="none"; }
+  })();
+}
+
+// ────────── DYNAMIC SECTION OPTIONS ──────────
+function updateSectionOptions() {
+  const cls = parseInt(document.getElementById("class").value);
+  const row = document.getElementById("section-row");
+  const isSenior = cls === 11 || cls === 12;
+
+  const currentVal = (() => {
+    const checked = document.querySelector("input[name='section']:checked");
+    return checked ? checked.value : null;
+  })();
+
+  if (isSenior) {
+    row.innerHTML = `
+      <label class="r-pill"><input type="radio" name="section" value="Science" /> Science</label>
+      <label class="r-pill"><input type="radio" name="section" value="Commerce" /> Commerce</label>`;
+  } else {
+    row.innerHTML = `
+      <label class="r-pill"><input type="radio" name="section" value="Shine" /> Shine</label>
+      <label class="r-pill"><input type="radio" name="section" value="Bright" /> Bright</label>`;
+  }
+
+  // Restore selection if same option still exists
+  const toRestore = row.querySelector(`input[value="${currentVal}"]`);
+  if (toRestore) toRestore.checked = true;
+}
+
+// ────────── INIT ──────────
+window.addEventListener("load", () => {
+  showPage("page-voting");
+  buildCandidates();
+
+  // Dynamic section options based on class
+  document.getElementById("class").addEventListener("input", updateSectionOptions);
+
+  setTimeout(() => {
+    const el = document.getElementById("intro");
+    el.classList.add("out");
+    setTimeout(() => el.remove(), 950);
+  }, 2900);
+});
+</script>
+
+<!--
+════════════════════════════════════════════════════════════════
+  📋 FREE CLOUD SETUP — JSONBin.io (No credit card, 100% free)
+════════════════════════════════════════════════════════════════
+
+STEP 1 — CREATE A FREE JSONBIN ACCOUNT:
+  1. Go to https://jsonbin.io
+  2. Click "Sign Up" — it's completely free, no card needed
+
+STEP 2 — CREATE A BIN:
+  1. Click "CREATE BIN"
+  2. In the editor paste: {}
+  3. Click "CREATE" — copy the BIN ID from the URL
+     (looks like: 664abc1234567890abcdef12)
+
+STEP 3 — GET YOUR API KEY:
+  1. Click your profile icon → "API Keys"
+  2. Copy your Master Key (starts with $2b$10$...)
+
+STEP 4 — PASTE INTO THIS FILE:
+  Near the top of the file, replace:
+    window._JSONBIN_BIN_ID  = "YOUR_BIN_ID";
+    window._JSONBIN_API_KEY = "YOUR_MASTER_KEY";
+  with your actual values.
+
+STEP 5 — SECTION LOGIC (already built in!):
+  - Class 11 or 12 → Section shows: Science / Commerce
+  - Any other class → Section shows: Shine / Bright
+
+STEP 6 — CANDIDATE PHOTOS:
+  - Place photos in the same folder as this HTML file
+  - Or use full URLs (Google Drive, Imgur, etc.)
+  - If no photo found, initials avatar is shown automatically
+
+STEP 7 — ADMIN ACCESS:
+  - Default password: "password" — change via Admin Panel → Change Password
+  - Admin can view live results from any device
+
+STEP 8 — RUNNING THE ELECTION:
+  - Open file on all voting computers (or host on GitHub Pages free)
+  - All computers share data via JSONBin in near-real-time (polls every 8s)
+════════════════════════════════════════════════════════════════
+-->
+</body>
+</html>
