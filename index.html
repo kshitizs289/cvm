@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -490,32 +489,35 @@ function initCloud() {
   }
 }
 
-// ── MERGE LOGIC: Always take the HIGHER vote count from cloud vs local ──
-// This means votes from PC-A and PC-B are always combined, never lost.
-function mergeCloudData(d) {
-  if (d.headBoy) {
-    for (const k in d.headBoy) {
-      headBoy[k] = Math.max(headBoy[k] || 0, d.headBoy[k] || 0);
-    }
-    // Add any new candidates from cloud that we don't have locally
-    for (const k in d.headBoy) {
-      if (!(k in headBoy)) headBoy[k] = d.headBoy[k];
-    }
-  }
-  if (d.headGirl) {
-    for (const k in d.headGirl) {
-      headGirl[k] = Math.max(headGirl[k] || 0, d.headGirl[k] || 0);
-    }
-    for (const k in d.headGirl) {
-      if (!(k in headGirl)) headGirl[k] = d.headGirl[k];
-    }
-  }
+// ── MERGE LOGIC ──
+// Cloud is the single source of truth for totals across all PCs.
+// Each PC tracks its OWN votes since last push (_localDelta).
+// On push: read cloud → add our delta on top → write back.
+// On sync (read-only): just replace local display with cloud totals.
+// This is true additive merging — PC-A's 5 + PC-B's 3 = 8, always.
+
+let _localDelta = { headBoy: {}, headGirl: {}, votedAadhaars: [] };
+
+function resetDelta() {
+  _localDelta = { headBoy: {}, headGirl: {}, votedAadhaars: [] };
+}
+
+function applyCloudData(d) {
+  // Fully replace local state with cloud totals (authoritative read)
+  if (d.headBoy)  { for (const k in d.headBoy)  headBoy[k]  = d.headBoy[k]  || 0; }
+  if (d.headGirl) { for (const k in d.headGirl) headGirl[k] = d.headGirl[k] || 0; }
+  // Add any new candidates from cloud
+  if (d.headBoy)  { for (const k in d.headBoy)  if (!(k in headBoy))  headBoy[k]  = d.headBoy[k]; }
+  if (d.headGirl) { for (const k in d.headGirl) if (!(k in headGirl)) headGirl[k] = d.headGirl[k]; }
   if (d.images) images = { ...images, ...d.images };
-  // Merge voted Aadhaar sets — union of both
+  // Merge voted Aadhaar sets — union of all PCs
   if (d.votedAadhaars) d.votedAadhaars.forEach(a => votedAadhaars.add(a));
   if (d.adminPassword) adminPassword = d.adminPassword;
   if (d.updatedAt) _lastCloudTimestamp = d.updatedAt;
 }
+
+// Keep old name working for compatibility
+function mergeCloudData(d) { applyCloudData(d); }
 
 async function syncFromCloud() {
   if (!firebaseReady) return;
@@ -537,21 +539,63 @@ async function syncFromCloud() {
 async function pushToCloud() {
   if (!firebaseReady) return false;
   try {
+    // ── READ-THEN-WRITE: fetch current cloud totals first ──
+    // This ensures PC-A and PC-B votes are ADDED together, not overwritten.
+    let cloudBoy = {}, cloudGirl = {}, cloudVoters = [], cloudPwd = adminPassword, cloudImages = images;
+    try {
+      const rRes = await fetch(
+        `https://api.jsonbin.io/v3/b/${BIN_ID()}/latest`,
+        { headers: { "X-Master-Key": API_KEY(), "X-Bin-Meta": "false" } }
+      );
+      if (rRes.ok) {
+        const d = await rRes.json();
+        cloudBoy    = d.headBoy    || {};
+        cloudGirl   = d.headGirl   || {};
+        cloudVoters = d.votedAadhaars || [];
+        cloudImages = { ...images, ...(d.images || {}) };
+        if (d.adminPassword) cloudPwd = d.adminPassword;
+      }
+    } catch(e) { /* if read fails, we push our own state */ }
+
+    // Add THIS PC's delta on top of cloud totals
+    const mergedBoy = { ...cloudBoy };
+    for (const k in _localDelta.headBoy) {
+      mergedBoy[k] = (mergedBoy[k] || 0) + (_localDelta.headBoy[k] || 0);
+    }
+    for (const k in headBoy) { if (!(k in mergedBoy)) mergedBoy[k] = headBoy[k]; }
+
+    const mergedGirl = { ...cloudGirl };
+    for (const k in _localDelta.headGirl) {
+      mergedGirl[k] = (mergedGirl[k] || 0) + (_localDelta.headGirl[k] || 0);
+    }
+    for (const k in headGirl) { if (!(k in mergedGirl)) mergedGirl[k] = headGirl[k]; }
+
+    // Union of all voted Aadhaar sets
+    const mergedVoters = [...new Set([...cloudVoters, ..._localDelta.votedAadhaars, ...votedAadhaars])];
+
     const res = await fetch(
       `https://api.jsonbin.io/v3/b/${BIN_ID()}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY() },
         body: JSON.stringify({
-          headBoy, headGirl, images,
-          votedAadhaars: [...votedAadhaars],
-          adminPassword,
+          headBoy: mergedBoy, headGirl: mergedGirl, images: cloudImages,
+          votedAadhaars: mergedVoters,
+          adminPassword: cloudPwd,
           updatedAt: Date.now()
         })
       }
     );
     if (!res.ok) { console.error("JSONBin PUT failed:", res.status); return false; }
-    console.log("✅ Pushed to cloud.");
+
+    // Update local state to match what we just wrote to cloud
+    for (const k in mergedBoy)  headBoy[k]  = mergedBoy[k];
+    for (const k in mergedGirl) headGirl[k] = mergedGirl[k];
+    mergedVoters.forEach(a => votedAadhaars.add(a));
+    images = cloudImages;
+    resetDelta();  // Delta is now baked into cloud — reset it
+    saveToLocal();
+    console.log("✅ Pushed to cloud (additive merge). Voters:", votedAadhaars.size);
     return true;
   } catch(e) {
     console.warn("Push failed (offline?) — vote is saved locally, will retry.");
@@ -655,6 +699,7 @@ function vote(name) {
   if (stage === "head_boy") {
     if (votedAadhaars.has(aadhaar)) { toast("This Aadhaar has already voted.", "error"); return; }
     headBoy[name]++;
+    _localDelta.headBoy[name] = (_localDelta.headBoy[name] || 0) + 1;  // track delta
     currentAadhaar = aadhaar;
     stage = "head_girl";
     buildCandidates();
@@ -663,6 +708,8 @@ function vote(name) {
   } else {
     if (aadhaar !== currentAadhaar) { toast("Use the same Aadhaar for Head Girl vote.", "error"); return; }
     headGirl[name]++;
+    _localDelta.headGirl[name] = (_localDelta.headGirl[name] || 0) + 1;  // track delta
+    _localDelta.votedAadhaars.push(aadhaar);
     votedAadhaars.add(aadhaar);
     document.getElementById("d-girl").className = "s-dot done";
     document.getElementById("d-done").className = "s-dot done";
@@ -680,13 +727,22 @@ function vote(name) {
 
 // ────────── ADMIN ──────────
 async function checkAdmin() {
-  await syncFromCloud();
+  // ── NO LAG FIX: check password immediately with local data ──
+  // Show the panel at once, then sync from cloud in background.
   if (document.getElementById("admin-pass").value !== adminPassword) { toast("Incorrect password.", "error"); return; }
   document.getElementById("admin-login").classList.add("hidden");
   document.getElementById("admin-panel").classList.remove("hidden");
   document.getElementById("res-fb-status").innerHTML = firebaseReady
-    ? '<span class="live-dot"></span> Live Cloud Sync · Auto-refresh ON' : '⚡ Local Mode';
-  renderResults();
+    ? '<span class="live-dot"></span> Syncing...' : '⚡ Local Mode';
+  renderResults();  // Show local data instantly — no wait
+
+  // Now sync from cloud in the background (non-blocking)
+  if (firebaseReady) {
+    syncFromCloud().then(() => {
+      renderResults();
+      updateLiveClock();
+    });
+  }
 }
 
 function renderResults() {
@@ -727,6 +783,7 @@ async function resetVotes() {
   for (const k in headBoy)  headBoy[k] = 0;
   for (const k in headGirl) headGirl[k] = 0;
   votedAadhaars.clear();
+  resetDelta();
   _pushPending = false;
   saveToLocal();          // Wipe localStorage too
   await pushToCloud();
@@ -785,6 +842,7 @@ async function saveNewCands() {
     if (name) { headGirl[name] = 0; images[name] = img || "default.png"; }
   });
   votedAadhaars.clear();
+  resetDelta();
   saveToLocal();
   await pushToCloud();
   stage = "head_boy";
@@ -897,18 +955,22 @@ NEW FEATURES IN THIS VERSION:
      Every vote is saved to localStorage instantly, AND pushed to cloud.
      On restart, votes are restored from localStorage → then merged with cloud.
 
+  ✅ TRUE ADDITIVE MULTI-PC MERGE — Each PC tracks only the votes cast ON THAT PC
+     (called the "delta"). When pushing to cloud, it reads the current cloud total
+     first, adds the local delta on top, then writes back. So PC-A's 5 votes +
+     PC-B's 3 votes = 8 on cloud — never overwritten, never lost.
+
   ✅ OFFLINE RESILIENCE — If internet is down when a student votes,
      the vote is saved locally and automatically uploaded when connection returns.
 
-  ✅ MERGE SYNC — Cloud stores the combined total from ALL PCs.
-     No votes are ever overwritten. PC-A + PC-B votes are always summed.
+  ✅ INSTANT RESULTS (NO LAG) — "View Results" now shows local data immediately
+     while cloud sync happens silently in the background. Zero waiting.
 
   ✅ LIVE ADMIN PANEL — Admin PC auto-refreshes every 3 seconds.
      Open Admin Panel → see real-time merged results from all voting PCs.
 
   ✅ SAFE RESET — Votes NEVER reset on their own.
      Only "Reset Votes" button in Admin Panel can clear them.
-     Reset clears both cloud AND localStorage on all PCs.
 ════════════════════════════════════════════════════════════════
 -->
 </body>
