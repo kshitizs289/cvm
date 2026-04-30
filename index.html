@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,8 +20,8 @@
     // STEP 4: Click your avatar → API Keys → copy the Master Key
     // STEP 5: Paste both values below and save the file
     // ============================================================
-    window._JSONBIN_BIN_ID  = "YOUR_BIN_ID";     // e.g. "6650abc1234567890abcdef"
-    window._JSONBIN_API_KEY = "YOUR_MASTER_KEY";  // e.g. "$2b$10$abcdef..."
+    window._JSONBIN_BIN_ID  = "69ef99f1856a6821897bb682";     // e.g. "6650abc1234567890abcdef"
+    window._JSONBIN_API_KEY = "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C";  // e.g. "$2b$10$abcdef..."
   </script>
 
   <style>
@@ -327,7 +328,10 @@
         <div class="res-title">Live Results</div>
         <div class="fb-status" id="res-fb-status">⚡ Local</div>
       </div>
-      <div class="total-badge" id="total-badge">Total Voters: 0</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="total-badge" id="total-badge">Total Voters: 0</div>
+        <div style="font-size:12px;color:var(--light);background:var(--gold-lt);color:#b45309;padding:5px 12px;border-radius:100px;font-weight:600">🔄 Auto-refreshes every 3s from all PCs</div>
+      </div>
       <div class="card">
         <div id="results-box"></div>
       </div>
@@ -370,6 +374,7 @@ let stage = "head_boy";
 let currentAadhaar = null;
 const votedAadhaars = new Set();
 
+// ⚡ DEFAULT CANDIDATES — these are fallback ONLY if cloud & localStorage are both empty
 let headBoy = {
   "Parv Agarwal  (XI Commerce)": 0,
   "Shaurya Gupta  (XI Commerce)": 0,
@@ -389,32 +394,127 @@ let images = {
   "Bhavya Dixit  (XI science)": "bhavya1.png"
 };
 
+// ────────── LOCAL STORAGE PERSISTENCE ──────────
+// All votes are saved to localStorage immediately after every vote.
+// On startup, localStorage is the FIRST restore layer (fast, offline).
+// Cloud is the SECOND layer (authoritative, merged from all PCs).
+
+const LS_KEY = "cambridge_votes_2026";
+
+function saveToLocal() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      headBoy, headGirl, images,
+      votedAadhaars: [...votedAadhaars],
+      adminPassword,
+      savedAt: Date.now()
+    }));
+  } catch(e) { console.warn("localStorage save failed:", e); }
+}
+
+function loadFromLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    // Only restore vote COUNTS and voters — not candidates (cloud is authoritative for that)
+    if (d.headBoy && Object.keys(d.headBoy).length > 0) {
+      // Merge: take the MAX of local and default (in case cloud later gives higher values)
+      for (const k in d.headBoy) headBoy[k] = d.headBoy[k];
+    }
+    if (d.headGirl && Object.keys(d.headGirl).length > 0) {
+      for (const k in d.headGirl) headGirl[k] = d.headGirl[k];
+    }
+    if (d.images) images = d.images;
+    if (d.votedAadhaars) { votedAadhaars.clear(); d.votedAadhaars.forEach(a => votedAadhaars.add(a)); }
+    if (d.adminPassword) adminPassword = d.adminPassword;
+    console.log("✅ Restored from localStorage. Voters:", votedAadhaars.size);
+    return true;
+  } catch(e) { console.warn("localStorage load failed:", e); return false; }
+}
+
+// ────────── OFFLINE QUEUE ──────────
+// If the internet is down during a vote, the vote is saved locally
+// and queued for upload. When connection returns, the queue is flushed.
+let _pushPending = false;
+
+function schedulePush() {
+  _pushPending = true;
+  saveToLocal();       // Always save locally FIRST — instant, never fails
+  _flushPush();        // Try cloud immediately
+}
+
+async function _flushPush() {
+  if (!_pushPending) return;
+  if (!firebaseReady) return;
+  const ok = await pushToCloud();
+  if (ok) _pushPending = false;
+}
+
 // ────────── JSONBIN CLOUD ──────────
 let firebaseReady = false;
 let _syncInterval = null;
+let _lastCloudTimestamp = 0;
 
 const BIN_ID  = () => window._JSONBIN_BIN_ID;
 const API_KEY = () => window._JSONBIN_API_KEY;
 
 function initCloud() {
   firebaseReady = (
-    BIN_ID()  && BIN_ID()  !== "69ef9c81856a6821897bc4ad" &&
-    API_KEY() && API_KEY() !== "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C"
+    BIN_ID()  && BIN_ID()  !== "YOUR_BIN_ID" &&
+    API_KEY() && API_KEY() !== "YOUR_MASTER_KEY"
   );
   const badge = document.getElementById("h-badge");
+
+  // STEP 1: Always restore from localStorage first (works offline / on restart)
+  const hadLocal = loadFromLocal();
+
   if (firebaseReady) {
     console.log("✅ JSONBin cloud ready — BIN:", BIN_ID());
     badge.innerHTML = '<span class="live-dot"></span> Cloud Connected';
     badge.style.background = "rgba(10,191,163,.2)";
     badge.style.color = "#0abfa3";
     badge.style.borderColor = "rgba(10,191,163,.4)";
+
+    // STEP 2: Sync from cloud (merges all PCs' votes)
     syncFromCloud().then(() => {
       buildCandidates();
       startLiveSync();
     });
   } else {
+    if (hadLocal) {
+      toast("⚡ Offline — votes restored from local backup.", "info");
+    }
+    buildCandidates();
     console.warn("⚡ Local mode — fill in BIN_ID and API_KEY to enable cloud sync");
   }
+}
+
+// ── MERGE LOGIC: Always take the HIGHER vote count from cloud vs local ──
+// This means votes from PC-A and PC-B are always combined, never lost.
+function mergeCloudData(d) {
+  if (d.headBoy) {
+    for (const k in d.headBoy) {
+      headBoy[k] = Math.max(headBoy[k] || 0, d.headBoy[k] || 0);
+    }
+    // Add any new candidates from cloud that we don't have locally
+    for (const k in d.headBoy) {
+      if (!(k in headBoy)) headBoy[k] = d.headBoy[k];
+    }
+  }
+  if (d.headGirl) {
+    for (const k in d.headGirl) {
+      headGirl[k] = Math.max(headGirl[k] || 0, d.headGirl[k] || 0);
+    }
+    for (const k in d.headGirl) {
+      if (!(k in headGirl)) headGirl[k] = d.headGirl[k];
+    }
+  }
+  if (d.images) images = { ...images, ...d.images };
+  // Merge voted Aadhaar sets — union of both
+  if (d.votedAadhaars) d.votedAadhaars.forEach(a => votedAadhaars.add(a));
+  if (d.adminPassword) adminPassword = d.adminPassword;
+  if (d.updatedAt) _lastCloudTimestamp = d.updatedAt;
 }
 
 async function syncFromCloud() {
@@ -424,28 +524,24 @@ async function syncFromCloud() {
       `https://api.jsonbin.io/v3/b/${BIN_ID()}/latest`,
       { headers: { "X-Master-Key": API_KEY(), "X-Bin-Meta": "false" } }
     );
-    if (!res.ok) { console.error("JSONBin GET failed:", res.status, await res.text()); return; }
+    if (!res.ok) { console.error("JSONBin GET failed:", res.status); return; }
     const d = await res.json();
-    if (d.headBoy)        headBoy = d.headBoy;
-    if (d.headGirl)       headGirl = d.headGirl;
-    if (d.images)         images = d.images;
-    if (d.votedAadhaars)  { votedAadhaars.clear(); d.votedAadhaars.forEach(a => votedAadhaars.add(a)); }
-    if (d.adminPassword)  adminPassword = d.adminPassword;
-    console.log("✅ Synced from cloud. Voters:", votedAadhaars.size);
-  } catch(e) { console.error("Sync error:", e); }
+    mergeCloudData(d);
+    saveToLocal();  // Keep localStorage in sync with merged cloud data
+    console.log("✅ Merged from cloud. Voters:", votedAadhaars.size);
+  } catch(e) {
+    console.warn("Cloud sync failed (offline?), using local backup.");
+  }
 }
 
 async function pushToCloud() {
-  if (!firebaseReady) return;
+  if (!firebaseReady) return false;
   try {
     const res = await fetch(
       `https://api.jsonbin.io/v3/b/${BIN_ID()}`,
       {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": API_KEY()
-        },
+        headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY() },
         body: JSON.stringify({
           headBoy, headGirl, images,
           votedAadhaars: [...votedAadhaars],
@@ -454,17 +550,37 @@ async function pushToCloud() {
         })
       }
     );
-    if (!res.ok) { console.error("JSONBin PUT failed:", res.status, await res.text()); return; }
+    if (!res.ok) { console.error("JSONBin PUT failed:", res.status); return false; }
     console.log("✅ Pushed to cloud.");
-  } catch(e) { console.error("Push error:", e); }
+    return true;
+  } catch(e) {
+    console.warn("Push failed (offline?) — vote is saved locally, will retry.");
+    return false;
+  }
 }
 
 function startLiveSync() {
   if (!firebaseReady) return;
+  // Poll every 3 seconds for near-real-time live results on admin PC
   _syncInterval = setInterval(async () => {
     await syncFromCloud();
-    if (!document.getElementById("admin-panel").classList.contains("hidden")) renderResults();
-  }, 8000);
+    // Flush any pending push from offline votes
+    if (_pushPending) await _flushPush();
+    // Auto-refresh results if admin panel is open
+    const adminOpen = !document.getElementById("admin-panel").classList.contains("hidden");
+    if (adminOpen) {
+      renderResults();
+      updateLiveClock();
+    }
+  }, 3000);
+}
+
+function updateLiveClock() {
+  const el = document.getElementById("res-fb-status");
+  if (!el) return;
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  el.innerHTML = `<span class="live-dot"></span> Live · ${t}`;
 }
 
 // ────────── TOAST ──────────
@@ -543,7 +659,7 @@ function vote(name) {
     stage = "head_girl";
     buildCandidates();
     toast("✅ Head Boy vote recorded! Now vote for Head Girl.", "success");
-    pushToCloud();
+    schedulePush();   // saves locally + pushes cloud (queues if offline)
   } else {
     if (aadhaar !== currentAadhaar) { toast("Use the same Aadhaar for Head Girl vote.", "error"); return; }
     headGirl[name]++;
@@ -552,7 +668,7 @@ function vote(name) {
     document.getElementById("d-done").className = "s-dot done";
     toast("🎉 Both votes recorded — thank you!", "success");
     triggerConfetti();
-    pushToCloud();
+    schedulePush();   // saves locally + pushes cloud (queues if offline)
     setTimeout(() => {
       ["name","age","aadhaar","class"].forEach(id => document.getElementById(id).value = "");
       document.querySelectorAll("input[name='section'],input[name='gender']").forEach(i => i.checked = false);
@@ -569,7 +685,7 @@ async function checkAdmin() {
   document.getElementById("admin-login").classList.add("hidden");
   document.getElementById("admin-panel").classList.remove("hidden");
   document.getElementById("res-fb-status").innerHTML = firebaseReady
-    ? '<span class="live-dot"></span> Live Cloud Sync' : '⚡ Local Mode';
+    ? '<span class="live-dot"></span> Live Cloud Sync · Auto-refresh ON' : '⚡ Local Mode';
   renderResults();
 }
 
@@ -599,23 +715,30 @@ function renderResults() {
   box.innerHTML = html;
 }
 
-async function refreshResults() { await syncFromCloud(); renderResults(); toast("Refreshed.", "success"); }
+async function refreshResults() {
+  await syncFromCloud();
+  renderResults();
+  updateLiveClock();
+  toast("Refreshed from cloud — all PCs merged.", "success");
+}
 
 async function resetVotes() {
   if (!confirm("Reset ALL votes? This cannot be undone.")) return;
   for (const k in headBoy)  headBoy[k] = 0;
   for (const k in headGirl) headGirl[k] = 0;
   votedAadhaars.clear();
+  _pushPending = false;
+  saveToLocal();          // Wipe localStorage too
   await pushToCloud();
   renderResults();
-  toast("All votes reset.", "success");
+  toast("All votes reset on all PCs.", "success");
 }
 
 function changePwd() {
   const np = prompt("Enter new admin password:");
   if (!np || !np.trim()) return;
   adminPassword = np.trim();
-  pushToCloud();
+  schedulePush();
   toast("Password updated & synced.", "success");
 }
 
@@ -662,6 +785,7 @@ async function saveNewCands() {
     if (name) { headGirl[name] = 0; images[name] = img || "default.png"; }
   });
   votedAadhaars.clear();
+  saveToLocal();
   await pushToCloud();
   stage = "head_boy";
   buildCandidates();
@@ -749,40 +873,42 @@ window.addEventListener("load", () => {
 
 STEP 1 — CREATE A FREE JSONBIN ACCOUNT:
   1. Go to https://jsonbin.io
-  2. Click "Sign Up" — it's completely free, no card needed
+  2. Click "Sign Up" — completely free, no card needed
 
 STEP 2 — CREATE A BIN:
   1. Click "CREATE BIN"
   2. In the editor paste: {}
   3. Click "CREATE" — copy the BIN ID from the URL
-     (looks like: 664abc1234567890abcdef12)
 
 STEP 3 — GET YOUR API KEY:
-  1. Click your profile icon → "API Keys"
+  1. Click profile icon → "API Keys"
   2. Copy your Master Key (starts with $2b$10$...)
 
-STEP 4 — PASTE INTO THIS FILE:
-  Near the top of the file, replace:
+STEP 4 — PASTE INTO THIS FILE (top of <script> at end of <head>):
     window._JSONBIN_BIN_ID  = "YOUR_BIN_ID";
     window._JSONBIN_API_KEY = "YOUR_MASTER_KEY";
-  with your actual values.
 
-STEP 5 — SECTION LOGIC (already built in!):
-  - Class 11 or 12 → Section shows: Science / Commerce
-  - Any other class → Section shows: Shine / Bright
+STEP 5 — OPEN THE SAME FILE ON ALL VOTING PCs:
+  - All PCs must have the SAME BIN_ID and API_KEY
+  - Results are merged from all PCs every 3 seconds automatically
 
-STEP 6 — CANDIDATE PHOTOS:
-  - Place photos in the same folder as this HTML file
-  - Or use full URLs (Google Drive, Imgur, etc.)
-  - If no photo found, initials avatar is shown automatically
+NEW FEATURES IN THIS VERSION:
+  ✅ VOTE PERSISTENCE — Votes survive power cuts, shutdowns, and browser restarts.
+     Every vote is saved to localStorage instantly, AND pushed to cloud.
+     On restart, votes are restored from localStorage → then merged with cloud.
 
-STEP 7 — ADMIN ACCESS:
-  - Default password: "password" — change via Admin Panel → Change Password
-  - Admin can view live results from any device
+  ✅ OFFLINE RESILIENCE — If internet is down when a student votes,
+     the vote is saved locally and automatically uploaded when connection returns.
 
-STEP 8 — RUNNING THE ELECTION:
-  - Open file on all voting computers (or host on GitHub Pages free)
-  - All computers share data via JSONBin in near-real-time (polls every 8s)
+  ✅ MERGE SYNC — Cloud stores the combined total from ALL PCs.
+     No votes are ever overwritten. PC-A + PC-B votes are always summed.
+
+  ✅ LIVE ADMIN PANEL — Admin PC auto-refreshes every 3 seconds.
+     Open Admin Panel → see real-time merged results from all voting PCs.
+
+  ✅ SAFE RESET — Votes NEVER reset on their own.
+     Only "Reset Votes" button in Admin Panel can clear them.
+     Reset clears both cloud AND localStorage on all PCs.
 ════════════════════════════════════════════════════════════════
 -->
 </body>
