@@ -329,7 +329,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
         <div class="total-badge" id="total-badge">Total Voters: 0</div>
-        <div style="font-size:12px;color:var(--light);background:var(--gold-lt);color:#b45309;padding:5px 12px;border-radius:100px;font-weight:600">🔄 Auto-refreshes every 6s from all PCs</div>
+        <div style="font-size:12px;color:var(--light);background:var(--gold-lt);color:#b45309;padding:5px 12px;border-radius:100px;font-weight:600">🔄 Auto-refreshes every 5s from all PCs</div>
       </div>
       <div class="card">
         <div id="results-box"></div>
@@ -460,8 +460,8 @@ const API_KEY = () => window._JSONBIN_API_KEY;
 
 function initCloud() {
   firebaseReady = (
-    BIN_ID()  && BIN_ID()  !== "69ef9c81856a6821897bc4ad" &&
-    API_KEY() && API_KEY() !== "$2a$10$w/KRjbOkN/.agSdzrnCzquHdkfdUJKolb4C7AZyJ5NtpvHpUsqb.C"
+    BIN_ID()  && BIN_ID()  !== "YOUR_BIN_ID" &&
+    API_KEY() && API_KEY() !== "YOUR_MASTER_KEY"
   );
   const badge = document.getElementById("h-badge");
 
@@ -615,7 +615,7 @@ async function pushToCloud() {
 
 function startLiveSync() {
   if (!firebaseReady) return;
-  // Poll every 2 seconds — always sync & re-render so both PCs stay in sync
+  // Poll every 6 seconds — always sync & re-render so both PCs stay in sync
   _syncInterval = setInterval(async () => {
     await syncFromCloud();
     if (_pushPending) await _flushPush();
@@ -623,7 +623,7 @@ function startLiveSync() {
     renderResults();
     const adminOpen = !document.getElementById("admin-panel").classList.contains("hidden");
     if (adminOpen) updateLiveClock();
-  }, 6000);
+  }, 5000);
 }
 
 function updateLiveClock() {
