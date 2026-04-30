@@ -329,7 +329,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
         <div class="total-badge" id="total-badge">Total Voters: 0</div>
-        <div style="font-size:12px;color:var(--light);background:var(--gold-lt);color:#b45309;padding:5px 12px;border-radius:100px;font-weight:600">🔄 Auto-refreshes every 3s from all PCs</div>
+        <div style="font-size:12px;color:var(--light);background:var(--gold-lt);color:#b45309;padding:5px 12px;border-radius:100px;font-weight:600">🔄 Auto-refreshes every 2s from all PCs</div>
       </div>
       <div class="card">
         <div id="results-box"></div>
@@ -503,12 +503,21 @@ function resetDelta() {
 }
 
 function applyCloudData(d) {
-  // Fully replace local state with cloud totals (authoritative read)
-  if (d.headBoy)  { for (const k in d.headBoy)  headBoy[k]  = d.headBoy[k]  || 0; }
-  if (d.headGirl) { for (const k in d.headGirl) headGirl[k] = d.headGirl[k] || 0; }
-  // Add any new candidates from cloud
-  if (d.headBoy)  { for (const k in d.headBoy)  if (!(k in headBoy))  headBoy[k]  = d.headBoy[k]; }
-  if (d.headGirl) { for (const k in d.headGirl) if (!(k in headGirl)) headGirl[k] = d.headGirl[k]; }
+  // Cloud is authoritative — replace local totals with cloud values
+  // But preserve any votes in _localDelta that haven't been pushed yet
+  if (d.headBoy) {
+    for (const k in d.headBoy) {
+      // cloud total + any local votes not yet pushed = what this PC should display
+      headBoy[k] = (d.headBoy[k] || 0) + (_localDelta.headBoy[k] || 0);
+    }
+    for (const k in d.headBoy) { if (!(k in headBoy)) headBoy[k] = d.headBoy[k]; }
+  }
+  if (d.headGirl) {
+    for (const k in d.headGirl) {
+      headGirl[k] = (d.headGirl[k] || 0) + (_localDelta.headGirl[k] || 0);
+    }
+    for (const k in d.headGirl) { if (!(k in headGirl)) headGirl[k] = d.headGirl[k]; }
+  }
   if (d.images) images = { ...images, ...d.images };
   // Merge voted Aadhaar sets — union of all PCs
   if (d.votedAadhaars) d.votedAadhaars.forEach(a => votedAadhaars.add(a));
@@ -588,12 +597,13 @@ async function pushToCloud() {
     );
     if (!res.ok) { console.error("JSONBin PUT failed:", res.status); return false; }
 
-    // Update local state to match what we just wrote to cloud
+    // Reset delta FIRST — it is now baked into cloud totals
+    // Then update local state to match cloud so next applyCloudData won't double-count
+    resetDelta();
     for (const k in mergedBoy)  headBoy[k]  = mergedBoy[k];
     for (const k in mergedGirl) headGirl[k] = mergedGirl[k];
     mergedVoters.forEach(a => votedAadhaars.add(a));
     images = cloudImages;
-    resetDelta();  // Delta is now baked into cloud — reset it
     saveToLocal();
     console.log("✅ Pushed to cloud (additive merge). Voters:", votedAadhaars.size);
     return true;
@@ -605,18 +615,15 @@ async function pushToCloud() {
 
 function startLiveSync() {
   if (!firebaseReady) return;
-  // Poll every 3 seconds for near-real-time live results on admin PC
+  // Poll every 2 seconds — always sync & re-render so both PCs stay in sync
   _syncInterval = setInterval(async () => {
     await syncFromCloud();
-    // Flush any pending push from offline votes
     if (_pushPending) await _flushPush();
-    // Auto-refresh results if admin panel is open
+    // Always re-render so results are fresh whenever admin panel is opened
+    renderResults();
     const adminOpen = !document.getElementById("admin-panel").classList.contains("hidden");
-    if (adminOpen) {
-      renderResults();
-      updateLiveClock();
-    }
-  }, 3000);
+    if (adminOpen) updateLiveClock();
+  }, 2000);
 }
 
 function updateLiveClock() {
