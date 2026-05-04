@@ -376,21 +376,19 @@ const votedAadhaars = new Set();
 // ⚡ DEFAULT CANDIDATES — these are fallback ONLY if cloud & localStorage are both empty
 let headBoy = {
   "Parv Agarwal  (XI Commerce)": 0,
-  "Shaurya Gupta  (XI Commerce)": 0,
-  "Atharv  (XI Commerce)": 0
+  "Dev Chaudhary  (XI Science)": 0,
 };
 let headGirl = {
   "Agrima  (XI Commerce)": 0,
   "Avishi Agnihotri  (XI science)": 0,
-  "Bhavya Dixit  (XI science)": 0
+  "Rudrani Patel  (XI science)": 0
 };
 let images = {
   "Parv Agarwal  (XI Commerce)": "parv1.png",
-  "Shaurya Gupta  (XI Commerce)": "shaurya1.png",
-  "Atharv  (XI Commerce)": "atharv1.png",
+  "Dev Chaudhary  (XI Science)": "dev1.png",
   "Agrima  (XI Commerce)": "agrima1.png",
   "Avishi Agnihotri  (XI science)": "avishi1.png",
-  "Bhavya Dixit  (XI science)": "bhavya1.png"
+  "Rudrani Patel  (XI science)": "rudrani1.png"
 };
 
 // ────────── LOCAL STORAGE PERSISTENCE ──────────
@@ -893,6 +891,7 @@ function updateSectionOptions() {
   const cls = parseInt(document.getElementById("class").value);
   const row = document.getElementById("section-row");
   const isSenior = cls === 11 || cls === 12;
+  const trisection = cls=== 9;
 
   const currentVal = (() => {
     const checked = document.querySelector("input[name='section']:checked");
@@ -903,6 +902,11 @@ function updateSectionOptions() {
     row.innerHTML = `
       <label class="r-pill"><input type="radio" name="section" value="Science" /> Science</label>
       <label class="r-pill"><input type="radio" name="section" value="Commerce" /> Commerce</label>`;
+  } else if (trisection) {
+    row.innerHTML = `
+      <label class="r-pill"><input type="radio" name="section" value="Shine" /> Shine</label>
+      <label class="r-pill"><input type="radio" name="section" value="Bright" /> Bright</label>
+      <label class="r-pill"><input type="radio" name="section" value="Glow" /> Glow</label>`;
   } else {
     row.innerHTML = `
       <label class="r-pill"><input type="radio" name="section" value="Shine" /> Shine</label>
