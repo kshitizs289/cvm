@@ -376,11 +376,15 @@ const votedAadhaars = new Set();
 // ⚡ DEFAULT CANDIDATES — these are fallback ONLY if cloud & localStorage are both empty
 let headBoy = {
   "Parv Agarwal  (XI Commerce)": 0,
+  "Atharv Pandey (XI Commerce)": 0,
   "Dev Chaudhary  (XI Science)": 0,
+  "Intsaab  (XI Science)": 0
 };
 let headGirl = {
   "Agrima  (XI Commerce)": 0,
   "Avishi Agnihotri  (XI science)": 0,
+  "Bhavya Dixit (XI Science): 0,
+  "Isha Sahu  (XI Science): 0,
   "Rudrani Patel  (XI science)": 0
 };
 let images = {
@@ -697,8 +701,8 @@ function vote(name) {
 
   if (!vName||isNaN(age)||!aadhaar||!cls||!section||!gender) { toast("Please fill all fields.", "error"); return; }
   if (aadhaar.length !== 4 || isNaN(aadhaar)) { toast("Aadhaar must be exactly 4 digits.", "error"); return; }
-  if (age < 11) { toast("You must be at least 11 years old.", "error"); return; }
-  if (age > 20) { toast("Age too high — not eligible.", "error"); return; }
+  if (age < 10) { toast("You must be at least 11 years old.", "error"); return; }
+  if (age > 50) { toast("Age too high — not eligible.", "error"); return; }
   if (parseInt(cls) > 12) { toast("Class cannot be above 12.", "error"); return; }
 
   if (stage === "head_boy") {
